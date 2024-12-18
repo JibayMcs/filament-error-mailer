@@ -27,10 +27,23 @@ class NotifyAdminOfError
      */
     public function handle($event)
     {
-        $coolDownPeriod = 0;
+        // Liste des erreurs à ignorer
+        $ignoredErrors = [
+            'cURL error 28', // Ajouter d'autres messages d'erreur si nécessaire
+        ];
+
+        // Vérifier si le message ou le contexte contient une erreur ignorée
+        if (isset($event->context['exception'])) {
+            $exceptionMessage = $event->context['exception']->getMessage();
+            foreach ($ignoredErrors as $ignoredError) {
+                if (str_contains($exceptionMessage, $ignoredError)) {
+                    // Ignorer cette erreur
+                    return;
+                }
+            }
+        }
 
         if (!in_array(env('APP_ENV'), config('error-mailer.disabledOn'))) {
-
             $recipients = config()->has('error-mailer.email.recipient')
                 ? (is_array(config('error-mailer.email.recipient')) ? config('error-mailer.email.recipient') : [config('error-mailer.email.recipient')])
                 : ['destinataire@example.com'];
@@ -51,11 +64,11 @@ class NotifyAdminOfError
 
                 if (!Cache::has($cacheKey)) {
                     $mail = Mail::to($recipients);
-                    if($bccRecipients){
+                    if ($bccRecipients) {
                         $mail->bcc($bccRecipients);
                     }
 
-                    if($ccRecipients){
+                    if ($ccRecipients) {
                         $mail->cc($ccRecipients);
                     }
 
